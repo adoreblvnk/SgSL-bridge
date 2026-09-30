@@ -1,0 +1,104 @@
+@import "tailwindcss";
+
+:root {
+  --duo-green: #58cc02;
+  --duo-green-dark: #46a302;
+  --duo-green-light: #dcfce7;
+  --duo-border: #bbf7d0;
+  --duo-bg: #f7fcf5;
+}
+
+body {
+  background-color: var(--duo-bg);
+  color: #1e293b;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 3D Tactile Buttons & Cards inspired by Duolingo */
+.btn-duo-green {
+  background-color: #58cc02;
+  color: #ffffff;
+  border-bottom: 4px solid #46a302;
+  transition: all 0.1s ease-in-out;
+}
+.btn-duo-green:hover {
+  background-color: #61d805;
+}
+.btn-duo-green:active {
+  border-bottom-width: 0px;
+  transform: translateY(4px);
+}
+
+.btn-duo-secondary {
+  background-color: #ffffff;
+  color: #475569;
+  border: 2px solid #e2e8f0;
+  border-bottom: 4px solid #cbd5e1;
+  transition: all 0.1s ease-in-out;
+}
+.btn-duo-secondary:hover {
+  background-color: #f8fafc;
+}
+.btn-duo-secondary:active {
+  border-bottom-width: 2px;
+  transform: translateY(2px);
+}
+
+.btn-duo-danger {
+  background-color: #ef4444;
+  color: #ffffff;
+  border-bottom: 4px solid #b91c1c;
+  transition: all 0.1s ease-in-out;
+}
+.btn-duo-danger:hover {
+  background-color: #f87171;
+}
+.btn-duo-danger:active {
+  border-bottom-width: 0px;
+  transform: translateY(4px);
+}
+
+.duo-card {
+  background-color: #ffffff;
+  border: 2px solid #e2e8f0;
+  border-bottom: 4px solid #cbd5e1;
+  border-radius: 1.25rem;
+}
+
+.duo-card-green {
+  background-color: #f0fdf4;
+  border: 2px solid #86efac;
+  border-bottom: 4px solid #4ade80;
+  border-radius: 1.25rem;
+}
+
+.duo-card-selected {
+  background-color: #f0fdf4;
+  border: 2px solid #58cc02;
+  border-bottom: 4px solid #46a302;
+}
+
+.duo-card-correct {
+  background-color: #f0fdf4;
+  border: 2px solid #22c55e;
+  border-bottom: 4px solid #16a34a;
+}
+
+.duo-card-wrong {
+  background-color: #fef2f2;
+  border: 2px solid #f87171;
+  border-bottom: 4px solid #ef4444;
+}
+
+/* Animations */
+@keyframes bounce-slight {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.animate-bounce-slight {
+  animation: bounce-slight 2s infinite ease-in-out;
+}
