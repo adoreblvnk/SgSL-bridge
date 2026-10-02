@@ -140,21 +140,34 @@ export default function WebcamTracker({ onSuccess, targetSign }: WebcamTrackerPr
                   motionHistoryRef.current.shift();
                 }
 
-                // Evaluate strict sign match
+                // Evaluate tolerant sign match
                 const evaluation = evaluateSignMatch(
                   targetSign,
                   landmarksList,
                   motionHistoryRef.current
                 );
                 setMatchScore(evaluation.score);
-                setMatchHint(evaluation.hint);
 
                 if (evaluation.matched) {
-                  holdCounterRef.current = Math.min(100, holdCounterRef.current + 2.2);
+                  // Fast, reliable charge: ~30 frames (1 second) to complete
+                  holdCounterRef.current = Math.min(100, holdCounterRef.current + 3.2);
+                } else if (evaluation.score >= 65) {
+                  // Warm grace zone: good form, momentary turnaround -> gentle forward progress
+                  holdCounterRef.current = Math.min(100, holdCounterRef.current + 0.6);
+                } else if (evaluation.score >= 40) {
+                  // Minor deviation -> very soft decay (never erases progress abruptly)
+                  holdCounterRef.current = Math.max(0, holdCounterRef.current - 0.6);
                 } else {
-                  holdCounterRef.current = Math.max(0, holdCounterRef.current - 5);
+                  // Completely wrong sign or hand dropped -> steady decay
+                  holdCounterRef.current = Math.max(0, holdCounterRef.current - 2.5);
                 }
                 setHoldProgress(holdCounterRef.current);
+
+                if (holdCounterRef.current >= 40 && holdCounterRef.current < 100) {
+                  setMatchHint(`Almost there! Keep holding (${Math.round(holdCounterRef.current)}%)`);
+                } else {
+                  setMatchHint(evaluation.hint);
+                }
                 if (holdCounterRef.current >= 100 && !verified) {
                   setVerified(true);
                   if (onSuccess) {
@@ -350,19 +363,19 @@ function evaluateSignMatch(
   const primaryHand = hands[0];
   const wrist = primaryHand[0];
 
-  // Calculate finger extensions (tip vs PIP distance from wrist)
+  // Relaxed finger extension ratio (1.08 allows natural curvature and slight tilts)
   const indexExt =
     Math.hypot(primaryHand[8].x - wrist.x, primaryHand[8].y - wrist.y) >
-    Math.hypot(primaryHand[6].x - wrist.x, primaryHand[6].y - wrist.y) * 1.15;
+    Math.hypot(primaryHand[6].x - wrist.x, primaryHand[6].y - wrist.y) * 1.08;
   const middleExt =
     Math.hypot(primaryHand[12].x - wrist.x, primaryHand[12].y - wrist.y) >
-    Math.hypot(primaryHand[10].x - wrist.x, primaryHand[10].y - wrist.y) * 1.15;
+    Math.hypot(primaryHand[10].x - wrist.x, primaryHand[10].y - wrist.y) * 1.08;
   const ringExt =
     Math.hypot(primaryHand[16].x - wrist.x, primaryHand[16].y - wrist.y) >
-    Math.hypot(primaryHand[14].x - wrist.x, primaryHand[14].y - wrist.y) * 1.15;
+    Math.hypot(primaryHand[14].x - wrist.x, primaryHand[14].y - wrist.y) * 1.08;
   const pinkyExt =
     Math.hypot(primaryHand[20].x - wrist.x, primaryHand[20].y - wrist.y) >
-    Math.hypot(primaryHand[18].x - wrist.x, primaryHand[18].y - wrist.y) * 1.15;
+    Math.hypot(primaryHand[18].x - wrist.x, primaryHand[18].y - wrist.y) * 1.08;
   const extendedCount = [indexExt, middleExt, ringExt, pinkyExt].filter(Boolean).length;
 
   // Trajectory analysis over the rolling history buffer
@@ -370,7 +383,7 @@ function evaluateSignMatch(
   let spanY = 0;
   let totalPath = 0;
 
-  if (history.length >= 8) {
+  if (history.length >= 6) {
     let minX = 1;
     let maxX = 0;
     let minY = 1;
@@ -389,103 +402,81 @@ function evaluateSignMatch(
     spanY = maxY - minY;
   }
 
-  const isStationary = history.length >= 8 && totalPath < 0.04;
-  const isErratic = spanX > 0.35 || spanY > 0.4;
-
+  const isErratic = spanX > 0.45 || spanY > 0.5;
   if (isErratic) {
-    return { matched: false, score: 25, hint: "Movement too wide — keep sign controlled" };
+    return { matched: false, score: 30, hint: "Movement too wide — keep sign controlled" };
   }
 
-  // Scenario 1: COFFEE (SgSL Grinder)
+  // Scenario 1: COFFEE (Grinder motion)
   if (targetSign === "coffee") {
-    // 1. Handshape: Fist required (0 extended fingers, thumb may rest on fist)
-    const isFist = extendedCount === 0 || (extendedCount === 1 && !middleExt && !ringExt && !pinkyExt);
+    // Tolerant fist check: up to 1 extended finger (thumb or loose finger allowed)
+    const isFist = extendedCount <= 1;
     if (!isFist) {
-      return { matched: false, score: 20, hint: "Form a fist (Open fingers detected)" };
+      return { matched: false, score: 30, hint: "Curl fingers into a fist shape" };
     }
 
-    // 2. Location: Mid-body / pantry interaction height
-    const isMidHeight = wrist.y >= 0.28 && wrist.y <= 0.88;
-    if (!isMidHeight) {
-      return { matched: false, score: 35, hint: "Hold fist at chest/waist height" };
+    const isGoodHeight = wrist.y >= 0.22 && wrist.y <= 0.92;
+    if (!isGoodHeight) {
+      return { matched: false, score: 45, hint: "Hold hands at chest/waist level" };
     }
 
-    // 3. Two-handed check if second hand present: must be stacked together!
     if (hands.length >= 2) {
       const secondWrist = hands[1][0];
       const handDist = Math.hypot(wrist.x - secondWrist.x, wrist.y - secondWrist.y);
-      if (handDist > 0.32) {
-        return { matched: false, score: 30, hint: "Stack fists together like a grinder" };
+      if (handDist > 0.45) {
+        return { matched: false, score: 40, hint: "Bring both hands closer together" };
       }
     }
 
-    // 4. Movement: Must perform circular / grinding motion
-    if (isStationary) {
-      return { matched: false, score: 55, hint: "Rotate fist in a circular grinding motion" };
-    }
-
-    const hasCircularMotion = spanX >= 0.02 && spanY >= 0.02 && totalPath >= 0.06;
-    if (hasCircularMotion) {
+    const hasMotion = totalPath >= 0.025 || (spanX >= 0.015 && spanY >= 0.015);
+    if (hasMotion) {
       return { matched: true, score: 94, hint: "Grinding motion verified • Hold steady" };
     }
 
-    return { matched: false, score: 60, hint: "Rotate fist in circular motion" };
+    // Good handshape, just needs continuous movement
+    return { matched: false, score: 70, hint: "Rotate fist in a circular grinding motion" };
   }
 
-  // Scenario 2: EAT (SgSL Spoon Motion)
+  // Scenario 2: EAT (Spoon motion)
   if (targetSign === "eat") {
-    // 1. Handshape: A-hand / curled fingers (holding a spoon/chopstick)
-    const isSpoonShape = extendedCount <= 1;
+    const isSpoonShape = extendedCount <= 2;
     if (!isSpoonShape) {
-      return { matched: false, score: 20, hint: "Curl fingers like holding a spoon" };
+      return { matched: false, score: 30, hint: "Curl fingers like holding a spoon" };
     }
 
-    // 2. Location: Hand must be elevated near mouth (upper 50% of camera frame)
-    const isNearMouth = wrist.y < 0.52 && wrist.x >= 0.22 && wrist.x <= 0.78;
+    const isNearMouth = wrist.y < 0.65 && wrist.x >= 0.15 && wrist.x <= 0.85;
     if (!isNearMouth) {
-      return { matched: false, score: 35, hint: "Raise hand closer to mouth height" };
+      return { matched: false, score: 45, hint: "Raise hand closer to mouth height" };
     }
 
-    // 3. Movement: Inward wrist oscillation towards mouth
-    if (isStationary) {
-      return { matched: false, score: 55, hint: "Rotate wrist near mouth like eating" };
-    }
-
-    const hasEatingMotion = spanY >= 0.02 && totalPath >= 0.05;
-    if (hasEatingMotion) {
+    const hasMotion = totalPath >= 0.025 || spanY >= 0.018;
+    if (hasMotion) {
       return { matched: true, score: 95, hint: "Eating motion verified • Hold steady" };
     }
 
-    return { matched: false, score: 60, hint: "Repeat eating motion towards mouth" };
+    return { matched: false, score: 70, hint: "Move hand gently towards mouth" };
   }
 
-  // Scenario 3: PLEASE (SgSL Chest Rub)
+  // Scenario 3: PLEASE (Chest rub)
   if (targetSign === "please") {
-    // 1. Handshape: Flat open palm (ALL 4 fingers extended)
-    const isFlatPalm = extendedCount >= 4;
+    // 3 or more extended fingers is a flat palm (allows relaxed thumb or pinky)
+    const isFlatPalm = extendedCount >= 3;
     if (!isFlatPalm) {
-      return { matched: false, score: 20, hint: "Open flat palm facing chest" };
+      return { matched: false, score: 30, hint: "Open flat palm facing chest" };
     }
 
-    // 2. Location: Centered on chest
-    const isOnChest = wrist.x >= 0.28 && wrist.x <= 0.72 && wrist.y >= 0.38 && wrist.y <= 0.82;
+    const isOnChest = wrist.x >= 0.18 && wrist.x <= 0.82 && wrist.y >= 0.28 && wrist.y <= 0.88;
     if (!isOnChest) {
-      return { matched: false, score: 35, hint: "Place flat palm on centre of chest" };
+      return { matched: false, score: 45, hint: "Place flat palm on centre of chest" };
     }
 
-    // 3. Movement: Circular rubbing motion on chest
-    if (isStationary) {
-      return { matched: false, score: 55, hint: "Rub palm gently in a circle on chest" };
-    }
-
-    const hasCircularRub = spanX >= 0.02 && spanY >= 0.02 && totalPath >= 0.06;
-    if (hasCircularRub) {
+    const hasMotion = totalPath >= 0.025 || (spanX >= 0.015 && spanY >= 0.015);
+    if (hasMotion) {
       return { matched: true, score: 96, hint: "Chest rub verified • Hold steady" };
     }
 
-    return { matched: false, score: 60, hint: "Rub palm in circular motion on chest" };
+    return { matched: false, score: 70, hint: "Rub palm gently in a circle on chest" };
   }
 
-  // Strict: Anything else is rejected with low score
-  return { matched: false, score: 10, hint: "Sign not recognized for target" };
+  return { matched: false, score: 15, hint: "Perform the sign shown above" };
 }
