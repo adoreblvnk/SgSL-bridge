@@ -37,6 +37,11 @@ export const SCENARIOS: Scenario[] = [
         movement: "Grinding circular motion simulating traditional coffee bean grinding, followed by an open forward invitation tilt.",
         culturalTip: "Keep friendly eye contact and slightly raise eyebrows to indicate a friendly question.",
         targetSignId: "coffee",
+        aslComparison: {
+          gloss: "COFFEE (ASL Cup vs. SgSL Grinder)",
+          note: "ASL commonly uses a single-handed C-shape mimicking lifting a mug, or a vertical fist stack. Traditional SgSL uses the two-handed kopi grinder motion inherited from Shanghainese sign language.",
+          mediaUrl: "/media/coffee-asl.gif",
+        },
       },
       {
         type: "receptive",
@@ -92,6 +97,7 @@ export const SCENARIOS: Scenario[] = [
           description: "One hand mimics holding a small cup or mug lifted towards the chin with a slight wrist twist.",
           influence: "American Sign Language (ASL) and modern international media influence among younger Singaporean signers.",
           badge: "Modern SgSL",
+          mediaUrl: "/media/coffee-asl.gif",
         },
         historicalBridge: "SgSL is an indigenous natural language that evolved from Shanghainese sign language, British Sign Language elements, and local dialect gestures. Senior Deaf Singaporeans often preserve distinct regional variants that carry decades of Singapore's social history.",
         respectRule: "Never correct an older Deaf colleague on their sign choice — adapt to their variant as an act of cultural respect.",
@@ -151,6 +157,11 @@ export const SCENARIOS: Scenario[] = [
         movement: "Wrist rotates inward twice near mouth, imitating holding a spoon or chopsticks, with an inquiring head tilt.",
         culturalTip: "In Singapore Deaf culture, eating is a primary community ritual. The sign reflects traditional communal hawker dining.",
         targetSignId: "eat",
+        aslComparison: {
+          gloss: "EAT (ASL Flat-O vs. SgSL Spoon)",
+          note: "In ASL, EAT is signed by tapping a Flat-O handshape onto the lips. In contrast, pioneer SgSL uses the A-hand spoon rotation (EATa), reflecting traditional Chinese soup spoon dining.",
+          mediaUrl: "/media/eat-asl.gif",
+        },
       },
       {
         type: "receptive",
@@ -198,7 +209,7 @@ export const SCENARIOS: Scenario[] = [
           description: "A-hand held near mouth with an inward wrist twist simulating eating with a traditional porcelain Chinese soup spoon.",
           influence: "Directly linked to Shanghainese sign roots in colonial Singapore schools.",
           badge: "Heritage SgSL",
-          mediaUrl: "/media/eat.gif",
+          mediaUrl: "/media/eat-sgsl.gif",
         },
         newerStyle: {
           era: "Contemporary SgSL",
@@ -206,6 +217,7 @@ export const SCENARIOS: Scenario[] = [
           description: "All fingertips touching thumb (Flat-O shape) tapped twice directly onto lips.",
           influence: "ASL cross-cultural exchange through digital video channels and international deaf forums.",
           badge: "Contemporary",
+          mediaUrl: "/media/eat-asl.gif",
         },
         historicalBridge: "The 'spoon rotation' variant was taught at the Singapore School for the Deaf for over 40 years. Recognising it immediately signals cultural understanding and respect to pioneer Deaf colleagues.",
         respectRule: "Both variants are valid SgSL. Elder colleagues warmly appreciate when younger hearing staff recognize the classic EATa sign.",
@@ -260,11 +272,16 @@ export const SCENARIOS: Scenario[] = [
         signGloss: "PLEASE AGAIN SLOW?",
         phoneticGuide: "PLEASE + AGAIN + SLOW?",
         englishMeaning: "Could you please sign that again, a little slower?",
-        mediaUrl: "/media/please.jpg",
+        mediaUrl: "/media/please.gif",
         handShape: "Flat open hand rubs gently in a circular clockwise motion on the centre of the chest.",
         movement: "Circular chest rub for PLEASE, followed by an open upward cupped gesture indicating 'again, slowly'.",
         culturalTip: "Slightly squint your eyes with an apologetic smile to show you are earnestly trying to understand.",
         targetSignId: "please",
+        aslComparison: {
+          gloss: "PLEASE (Shared Root, Local Context)",
+          note: "Both SgSL and ASL share the circular chest rub for PLEASE. In Singapore workplaces, SgSL pairs this with gentle head bowing and eye softening to convey local deference and warmth.",
+          mediaUrl: "/media/please.gif",
+        },
       },
       {
         type: "receptive",
@@ -312,7 +329,7 @@ export const SCENARIOS: Scenario[] = [
           description: "Both 5-hands start palms facing body at chest height, then turn decisively palms down/out with a clean downward stop.",
           influence: "Directly preserved from Shanghainese Deaf school curriculum in Singapore from the 1950s-1970s.",
           badge: "Heritage SgSL",
-          mediaUrl: "/media/finish.gif",
+          mediaUrl: "/media/finish-sgsl.gif",
         },
         newerStyle: {
           era: "Contemporary SgSL",
@@ -320,6 +337,7 @@ export const SCENARIOS: Scenario[] = [
           description: "A quick single-handed flick outward from chest height, frequently used in rapid informal chat.",
           influence: "Modern natural conversational abbreviation among bilingual young Deaf professionals.",
           badge: "Modern SgSL",
+          mediaUrl: "/media/finish-asl.gif",
         },
         historicalBridge: "Shanghainese sign educators established Singapore's first structured deaf schooling. Understanding their formal sign syntax preserves the linguistic legacy of Singapore's Deaf pioneers.",
         respectRule: "Both styles reflect Singapore's rich linguistic tapestry. Using courteous clarification honors the dialogue.",

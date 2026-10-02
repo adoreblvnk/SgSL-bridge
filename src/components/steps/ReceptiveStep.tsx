@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { ReceptiveStepData } from "@/types";
+import React, { useState, useEffect } from "react";
+import { ReceptiveStepData, ReceptiveOption } from "@/types";
 import confetti from "canvas-confetti";
 import { CheckCircle2, XCircle, ArrowRight, HelpCircle } from "lucide-react";
 
@@ -14,17 +14,31 @@ interface ReceptiveStepProps {
 export default function ReceptiveStep({ data, onNext, autoSolveTrigger }: ReceptiveStepProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState<boolean>(false);
+  const [shuffledOptions, setShuffledOptions] = useState<ReceptiveOption[]>([]);
 
-  React.useEffect(() => {
+  useEffect(() => {
+    const array = [...data.options];
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+    setShuffledOptions(array);
+    setSelectedId(null);
+    setSubmitted(false);
+  }, [data]);
+
+  const displayOptions = shuffledOptions.length > 0 ? shuffledOptions : data.options;
+
+  useEffect(() => {
     if (autoSolveTrigger && !submitted) {
-      const correctOption = data.options.find((opt) => opt.correct);
+      const correctOption = displayOptions.find((opt) => opt.correct);
       if (correctOption) {
         setSelectedId(correctOption.id);
         setSubmitted(true);
         confetti({ particleCount: 40, spread: 60, origin: { y: 0.7 } });
       }
     }
-  }, [autoSolveTrigger, data.options, submitted]);
+  }, [autoSolveTrigger, displayOptions, submitted]);
 
   const handleSelect = (id: string) => {
     if (submitted) return;
@@ -34,7 +48,7 @@ export default function ReceptiveStep({ data, onNext, autoSolveTrigger }: Recept
   const handleSubmit = () => {
     if (!selectedId) return;
     setSubmitted(true);
-    const chosen = data.options.find((opt) => opt.id === selectedId);
+    const chosen = displayOptions.find((opt) => opt.id === selectedId);
     if (chosen?.correct) {
       confetti({
         particleCount: 60,
@@ -50,7 +64,7 @@ export default function ReceptiveStep({ data, onNext, autoSolveTrigger }: Recept
     setSelectedId(null);
   };
 
-  const selectedOption = data.options.find((opt) => opt.id === selectedId);
+  const selectedOption = displayOptions.find((opt) => opt.id === selectedId);
   const isCorrect = selectedOption?.correct ?? false;
 
   return (
@@ -78,7 +92,7 @@ export default function ReceptiveStep({ data, onNext, autoSolveTrigger }: Recept
 
         {/* Options List */}
         <div className="flex flex-col gap-2">
-          {data.options.map((opt, idx) => {
+          {displayOptions.map((opt, idx) => {
             const isSelected = selectedId === opt.id;
             let cardClass = "duo-card cursor-pointer hover:bg-slate-50";
 

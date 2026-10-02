@@ -29,6 +29,11 @@ export interface ExpressiveStepData {
   movement: string;
   culturalTip: string;
   targetSignId: string;
+  aslComparison?: {
+    gloss: string;
+    note: string;
+    mediaUrl?: string;
+  };
 }
 
 export interface ReceptiveOption {
