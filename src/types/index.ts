@@ -17,6 +17,12 @@ export interface EtiquetteStepData {
   ruleOfThumb: string;
   iconName: string;
 }
+export interface SignPart {
+  gloss: string;
+  mediaUrl: string;
+  handShape?: string;
+  movement?: string;
+}
 
 export interface ExpressiveStepData {
   type: "expressive";
@@ -34,6 +40,7 @@ export interface ExpressiveStepData {
     note: string;
     mediaUrl?: string;
   };
+  signParts?: SignPart[];
 }
 
 export interface ReceptiveOption {

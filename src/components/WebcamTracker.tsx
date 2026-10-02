@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import { Camera, CameraOff, CheckCircle2, RefreshCw } from "lucide-react";
+import { Camera, CameraOff, CheckCircle2, RefreshCw, RotateCcw } from "lucide-react";
 
 interface WebcamTrackerProps {
   onSuccess?: () => void;
   targetSign: string;
+  mode?: "sgsl" | "asl";
 }
 
 const WASM_CDN = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm";
@@ -20,7 +21,11 @@ const CONNECTIONS = [
   [0, 17],
 ];
 
-export default function WebcamTracker({ onSuccess, targetSign }: WebcamTrackerProps) {
+export default function WebcamTracker({
+  onSuccess,
+  targetSign,
+  mode = "sgsl",
+}: WebcamTrackerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [cameraActive, setCameraActive] = useState<boolean>(false);
@@ -36,7 +41,14 @@ export default function WebcamTracker({ onSuccess, targetSign }: WebcamTrackerPr
   const animFrameRef = useRef<number>(0);
   const lastTimeRef = useRef<number>(-1);
   const holdCounterRef = useRef<number>(0);
-  const motionHistoryRef = useRef<Array<{ x: number; y: number }>>([]);
+  const motionHistoryRef = useRef<Array<{ wx: number; wy: number; tx: number; ty: number }>>([]);
+
+  // Keep mutable refs in sync on EVERY render so renderLoop never closes over stale props
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
+  const targetSignRef = useRef(targetSign);
+  targetSignRef.current = targetSign;
+
   const startCamera = async () => {
     setLoading(true);
     setErrorMsg(null);
@@ -132,19 +144,27 @@ export default function WebcamTracker({ onSuccess, targetSign }: WebcamTrackerPr
                 setHandDetected(true);
                 const landmarksList = results.landmarks;
 
-                // Track motion history of primary hand wrist
+                // Track multi-point motion: wrist (0) + index fingertip (8) for rotation sensitivity
                 const primaryHand = landmarksList[0];
                 const wrist = primaryHand[0];
-                motionHistoryRef.current.push({ x: wrist.x, y: wrist.y });
+                const indexTip = primaryHand[8];
+                motionHistoryRef.current.push({
+                  wx: wrist.x,
+                  wy: wrist.y,
+                  tx: indexTip.x,
+                  ty: indexTip.y,
+                });
                 if (motionHistoryRef.current.length > 25) {
                   motionHistoryRef.current.shift();
                 }
-
-                // Evaluate tolerant sign match
+                // Evaluate tolerant sign match using current refs (never stale)
+                const currentMode = modeRef.current;
+                const currentSign = targetSignRef.current;
                 const evaluation = evaluateSignMatch(
-                  targetSign,
+                  currentSign,
                   landmarksList,
-                  motionHistoryRef.current
+                  motionHistoryRef.current,
+                  currentMode
                 );
                 setMatchScore(evaluation.score);
 
@@ -175,8 +195,11 @@ export default function WebcamTracker({ onSuccess, targetSign }: WebcamTrackerPr
                   }
                 }
 
+                const isAsl = currentMode === "asl";
                 for (const landmarks of landmarksList) {
-                  ctx.strokeStyle = evaluation.matched ? "#58cc02" : "#38bdf8";
+                  ctx.strokeStyle = evaluation.matched
+                    ? (isAsl ? "#38bdf8" : "#58cc02")
+                    : (isAsl ? "#60a5fa" : "#86efac");
                   ctx.lineWidth = 3;
                   for (const [start, end] of CONNECTIONS) {
                     const p1 = landmarks[start];
@@ -188,7 +211,9 @@ export default function WebcamTracker({ onSuccess, targetSign }: WebcamTrackerPr
                   }
 
                   ctx.fillStyle = "#ffffff";
-                  ctx.strokeStyle = evaluation.matched ? "#46a302" : "#0284c7";
+                  ctx.strokeStyle = evaluation.matched
+                    ? (isAsl ? "#0284c7" : "#46a302")
+                    : (isAsl ? "#2563eb" : "#16a34a");
                   ctx.lineWidth = 2;
                   for (const point of landmarks) {
                     ctx.beginPath();
@@ -228,6 +253,19 @@ export default function WebcamTracker({ onSuccess, targetSign }: WebcamTrackerPr
     };
   }, [cameraActive]);
 
+  const handleReset = useCallback(() => {
+    setVerified(false);
+    setHoldProgress(0);
+    setMatchScore(0);
+    setMatchHint("Align hand with camera");
+    holdCounterRef.current = 0;
+    motionHistoryRef.current = [];
+  }, []);
+
+  useEffect(() => {
+    handleReset();
+  }, [targetSign, mode, handleReset]);
+
   const handleSimulateSign = () => {
     setHandDetected(true);
     setVerified(true);
@@ -240,16 +278,18 @@ export default function WebcamTracker({ onSuccess, targetSign }: WebcamTrackerPr
   };
 
   return (
-    <div className="w-full bg-slate-900 rounded-xl overflow-hidden p-3 relative flex flex-col items-center border border-slate-800">
-      <div className="w-full flex items-center justify-between pb-2 px-1 text-xs text-slate-300 border-b border-slate-800/80 mb-2">
-        <span className="font-semibold text-[11px] text-slate-400">
-          Camera Mirror {cameraActive && (handDetected ? `• ${matchScore}% Match` : "• Standby")}
+    <div
+      className={`w-full bg-slate-900 rounded-xl overflow-hidden p-3 relative flex flex-col items-center border-2 transition-all duration-300 ${
+        mode === "asl"
+          ? "border-sky-500/70 shadow-[0_0_15px_rgba(56,189,248,0.2)]"
+          : "border-emerald-500/70 shadow-[0_0_15px_rgba(88,204,2,0.2)]"
+      }`}
+    >
+      {/* Camera Header */}
+      <div className="w-full flex items-center justify-between pb-2 px-1 text-xs border-b border-slate-800/80 mb-2">
+        <span className="font-semibold text-[11px] text-slate-300">
+          Camera Mirror {cameraActive && (handDetected ? `• ${matchScore}% Match` : "• Ready")}
         </span>
-        {cameraActive && (
-          <span className="text-[10px] uppercase font-bold text-emerald-400">
-            Target: {targetSign.toUpperCase()}
-          </span>
-        )}
       </div>
 
       <div className="relative w-full aspect-[4/3] max-h-52 bg-slate-950 rounded-lg overflow-hidden flex items-center justify-center">
@@ -271,11 +311,15 @@ export default function WebcamTracker({ onSuccess, targetSign }: WebcamTrackerPr
             <button
               onClick={startCamera}
               disabled={loading}
-              className="mt-2 px-3 py-1.5 bg-[#58cc02] hover:bg-[#46a302] text-white rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition"
+              className={`mt-1 px-4 py-2 text-white rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition ${
+                mode === "asl"
+                  ? "bg-sky-600 hover:bg-sky-700 shadow-md shadow-sky-600/20"
+                  : "bg-[#58cc02] hover:bg-[#46a302] shadow-md shadow-emerald-600/20"
+              }`}
             >
               {loading ? (
                 <>
-                  <RefreshCw className="w-3 h-3 animate-spin" /> Loading...
+                  <RefreshCw className="w-3 h-3 animate-spin" /> Starting Camera...
                 </>
               ) : (
                 <>
@@ -287,19 +331,27 @@ export default function WebcamTracker({ onSuccess, targetSign }: WebcamTrackerPr
         )}
 
         {cameraActive && verified && (
-          <div className="absolute inset-0 bg-green-950/80 backdrop-blur-xs flex flex-col items-center justify-center text-white z-20 animate-fade-in">
-            <CheckCircle2 className="w-12 h-12 text-green-400 mb-1 animate-bounce" />
+          <div className="absolute inset-0 bg-green-950/85 backdrop-blur-xs flex flex-col items-center justify-center text-white z-20 animate-fade-in p-4 text-center">
+            <CheckCircle2 className="w-10 h-10 text-green-400 mb-1 animate-bounce" />
             <p className="text-sm font-extrabold uppercase tracking-wider text-green-300">
-              Sign Verified: {targetSign.toUpperCase()}!
+              Sign Verified: {mode === "asl" ? "ASL" : "SgSL"} {targetSign.toUpperCase()}!
             </p>
-            <span className="text-[11px] text-green-200/80">Correct Handshape & Position</span>
+            <span className="text-[11px] text-green-200/80 mb-3">
+              {mode === "asl" ? "ASL Movement Verified" : "SgSL Heritage Movement Verified"}
+            </span>
+            <button
+              onClick={handleReset}
+              className="px-3.5 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 border border-white/30 shadow-sm cursor-pointer"
+            >
+              <RotateCcw className="w-3.5 h-3.5" /> Practice Again
+            </button>
           </div>
         )}
 
         {cameraActive && !verified && handDetected && (
-          <div className="absolute top-2 left-2 right-2 bg-slate-900/80 backdrop-blur-xs px-2.5 py-1.5 rounded-lg border border-slate-700/60 flex items-center justify-between text-[11px] text-white z-10">
+          <div className="absolute bottom-2 left-2 right-2 bg-slate-900/90 backdrop-blur-xs px-2.5 py-1.5 rounded-lg border border-slate-700/60 flex items-center justify-between text-[11px] text-white z-10">
             <span className="font-medium truncate max-w-[200px] sm:max-w-xs">{matchHint}</span>
-            <span className={`font-bold ${matchScore >= 75 ? "text-emerald-400" : "text-amber-400"}`}>
+            <span className={`font-bold ${matchScore >= 75 ? (mode === "asl" ? "text-sky-400" : "text-emerald-400") : "text-amber-400"}`}>
               {matchScore}%
             </span>
           </div>
@@ -316,7 +368,9 @@ export default function WebcamTracker({ onSuccess, targetSign }: WebcamTrackerPr
       {cameraActive && !verified && (
         <div className="w-full mt-2 bg-slate-800 rounded-full h-1.5 overflow-hidden">
           <div
-            className="bg-emerald-500 h-full transition-all duration-150 ease-out"
+            className={`h-full transition-all duration-150 ease-out ${
+              mode === "asl" ? "bg-sky-500" : "bg-emerald-500"
+            }`}
             style={{ width: `${holdProgress}%` }}
           />
         </div>
@@ -327,16 +381,27 @@ export default function WebcamTracker({ onSuccess, targetSign }: WebcamTrackerPr
           <>
             <button
               onClick={stopCamera}
-              className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs font-medium flex items-center gap-1"
+              className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs font-medium flex items-center gap-1 cursor-pointer"
             >
               <CameraOff className="w-3 h-3" /> Stop
             </button>
-            <button
-              onClick={handleSimulateSign}
-              className="px-3 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded text-xs font-semibold"
-            >
-              Manual Verify
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={handleReset}
+                title="Reset sign practice progress"
+                className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs font-medium flex items-center gap-1 cursor-pointer"
+              >
+                <RotateCcw className="w-3 h-3" /> Reset
+              </button>
+              {!verified && (
+                <button
+                  onClick={handleSimulateSign}
+                  className="px-3 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded text-xs font-semibold cursor-pointer"
+                >
+                  Manual Verify
+                </button>
+              )}
+            </div>
           </>
         ) : (
           <button
@@ -350,11 +415,11 @@ export default function WebcamTracker({ onSuccess, targetSign }: WebcamTrackerPr
     </div>
   );
 }
-
 function evaluateSignMatch(
   targetSign: string,
   hands: Array<Array<{ x: number; y: number; z: number }>>,
-  history: Array<{ x: number; y: number }>
+  history: Array<{ wx: number; wy: number; tx: number; ty: number }>,
+  mode: "sgsl" | "asl" = "sgsl"
 ): { matched: boolean; score: number; hint: string } {
   if (!hands || hands.length === 0) {
     return { matched: false, score: 0, hint: "Raise hand into camera view" };
@@ -378,104 +443,184 @@ function evaluateSignMatch(
     Math.hypot(primaryHand[18].x - wrist.x, primaryHand[18].y - wrist.y) * 1.08;
   const extendedCount = [indexExt, middleExt, ringExt, pinkyExt].filter(Boolean).length;
 
-  // Trajectory analysis over the rolling history buffer
-  let spanX = 0;
-  let spanY = 0;
-  let totalPath = 0;
+  // Multi-point trajectory analysis: tracks both wrist and fingertip rotation
+  let wristSpanX = 0;
+  let wristSpanY = 0;
+  let wristPath = 0;
+  let tipSpanX = 0;
+  let tipSpanY = 0;
+  let tipPath = 0;
 
   if (history.length >= 6) {
-    let minX = 1;
-    let maxX = 0;
-    let minY = 1;
-    let maxY = 0;
+    let minWx = 1;
+    let maxWx = 0;
+    let minWy = 1;
+    let maxWy = 0;
+    let minTx = 1;
+    let maxTx = 0;
+    let minTy = 1;
+    let maxTy = 0;
     for (let i = 0; i < history.length; i++) {
       const p = history[i];
-      if (p.x < minX) minX = p.x;
-      if (p.x > maxX) maxX = p.x;
-      if (p.y < minY) minY = p.y;
-      if (p.y > maxY) maxY = p.y;
+      if (p.wx < minWx) minWx = p.wx;
+      if (p.wx > maxWx) maxWx = p.wx;
+      if (p.wy < minWy) minWy = p.wy;
+      if (p.wy > maxWy) maxWy = p.wy;
+
+      if (p.tx < minTx) minTx = p.tx;
+      if (p.tx > maxTx) maxTx = p.tx;
+      if (p.ty < minTy) minTy = p.ty;
+      if (p.ty > maxTy) maxTy = p.ty;
+
       if (i > 0) {
-        totalPath += Math.hypot(p.x - history[i - 1].x, p.y - history[i - 1].y);
+        wristPath += Math.hypot(p.wx - history[i - 1].wx, p.wy - history[i - 1].wy);
+        tipPath += Math.hypot(p.tx - history[i - 1].tx, p.ty - history[i - 1].ty);
       }
     }
-    spanX = maxX - minX;
-    spanY = maxY - minY;
+    wristSpanX = maxWx - minWx;
+    wristSpanY = maxWy - minWy;
+    tipSpanX = maxTx - minTx;
+    tipSpanY = maxTy - minTy;
   }
+
+  const motionAmount = Math.max(wristPath, tipPath);
+  const spanX = Math.max(wristSpanX, tipSpanX);
+  const spanY = Math.max(wristSpanY, tipSpanY);
 
   const isErratic = spanX > 0.45 || spanY > 0.5;
   if (isErratic) {
     return { matched: false, score: 30, hint: "Movement too wide — keep sign controlled" };
   }
 
-  // Scenario 1: COFFEE (Grinder motion)
+  // Scenario 1: COFFEE
   if (targetSign === "coffee") {
-    // Tolerant fist check: up to 1 extended finger (thumb or loose finger allowed)
-    const isFist = extendedCount <= 1;
-    if (!isFist) {
-      return { matched: false, score: 30, hint: "Curl fingers into a fist shape" };
-    }
+    const handScale =
+      Math.hypot(primaryHand[9].x - wrist.x, primaryHand[9].y - wrist.y) || 0.15;
+    const thumbIndexDist = Math.hypot(
+      primaryHand[8].x - primaryHand[4].x,
+      primaryHand[8].y - primaryHand[4].y
+    );
+    const thumbIndexRatio = thumbIndexDist / handScale;
 
-    const isGoodHeight = wrist.y >= 0.22 && wrist.y <= 0.92;
-    if (!isGoodHeight) {
-      return { matched: false, score: 45, hint: "Hold hands at chest/waist level" };
-    }
-
-    if (hands.length >= 2) {
-      const secondWrist = hands[1][0];
-      const handDist = Math.hypot(wrist.x - secondWrist.x, wrist.y - secondWrist.y);
-      if (handDist > 0.45) {
-        return { matched: false, score: 40, hint: "Bring both hands closer together" };
+    if (mode === "asl") {
+      // ASL: C-hand shape drinking from a cup
+      const isTightFist = thumbIndexRatio < 0.32 && extendedCount <= 1;
+      if (isTightFist) {
+        return {
+          matched: false,
+          score: 25,
+          hint: "Fist is SgSL • Open fingers into a C-cup shape!",
+        };
       }
-    }
 
-    const hasMotion = totalPath >= 0.025 || (spanX >= 0.015 && spanY >= 0.015);
-    if (hasMotion) {
-      return { matched: true, score: 94, hint: "Grinding motion verified • Hold steady" };
-    }
+      const isCupShape = thumbIndexRatio >= 0.30 && thumbIndexRatio <= 1.6 && extendedCount <= 3;
+      if (!isCupShape) {
+        return { matched: false, score: 30, hint: "Form a C-hand shape (holding a cup)" };
+      }
 
-    // Good handshape, just needs continuous movement
-    return { matched: false, score: 70, hint: "Rotate fist in a circular grinding motion" };
+      const isNearChin = wrist.y <= 0.88 || primaryHand[8].y <= 0.78;
+      if (!isNearChin) {
+        return { matched: false, score: 45, hint: "Lift C-hand cup towards chin/mouth" };
+      }
+
+      const hasTilt = motionAmount >= 0.010 || spanY >= 0.008;
+      return {
+        matched: true,
+        score: hasTilt ? 96 : 92,
+        hint: "C-hand cup detected • Hold steady to verify",
+      };
+    } else {
+      // SgSL: Two-handed kopi grinder motion (fists stacked)
+      if (thumbIndexRatio >= 0.45 && extendedCount > 1) {
+        return {
+          matched: false,
+          score: 25,
+          hint: "C-hand is ASL • Curl fingers into closed fists for SgSL grinder!",
+        };
+      }
+
+      const isFist = thumbIndexRatio < 0.45 && extendedCount <= 1;
+      if (!isFist) {
+        return { matched: false, score: 30, hint: "Curl fingers into a fist shape" };
+      }
+
+      const isGoodHeight = wrist.y >= 0.22 && wrist.y <= 0.92;
+      if (!isGoodHeight) {
+        return { matched: false, score: 45, hint: "Hold hands at chest/waist level" };
+      }
+
+      if (hands.length >= 2) {
+        const secondWrist = hands[1][0];
+        const handDist = Math.hypot(wrist.x - secondWrist.x, wrist.y - secondWrist.y);
+        if (handDist > 0.45) {
+          return { matched: false, score: 40, hint: "Bring both hands closer together" };
+        }
+      }
+
+      const hasMotion = motionAmount >= 0.015 || (spanX >= 0.012 && spanY >= 0.012);
+      if (hasMotion) {
+        return { matched: true, score: 94, hint: "SgSL Grinder motion verified • Hold steady" };
+      }
+      return { matched: false, score: 70, hint: "Rotate fists in traditional kopi grinder motion" };
+    }
   }
 
-  // Scenario 2: EAT (Spoon motion)
+  // Scenario 2: EAT
   if (targetSign === "eat") {
-    const isSpoonShape = extendedCount <= 2;
-    if (!isSpoonShape) {
-      return { matched: false, score: 30, hint: "Curl fingers like holding a spoon" };
+    if (mode === "asl") {
+      // ASL: Flat-O fingers-to-mouth tap (EATo)
+      const isFlatO = extendedCount <= 2;
+      const isNearLips = wrist.y < 0.65 && wrist.x >= 0.15 && wrist.x <= 0.85;
+      if (!isNearLips) {
+        return { matched: false, score: 45, hint: "Bring hand towards lips/mouth" };
+      }
+      const hasTapping = motionAmount >= 0.015 || spanY >= 0.012;
+      if (isFlatO && hasTapping) {
+        return { matched: true, score: 95, hint: "ASL Flat-O tap verified • Hold steady" };
+      }
+      return { matched: false, score: 70, hint: "Tap fingers onto lips (ASL EATo)" };
+    } else {
+      // SgSL: A-hand spoon wrist rotation (EATa) - rotation detected via tipPath!
+      const isSpoonShape = extendedCount <= 2;
+      if (!isSpoonShape) {
+        return { matched: false, score: 30, hint: "Curl fingers like holding a spoon" };
+      }
+      const isNearMouth = wrist.y < 0.70 && wrist.x >= 0.12 && wrist.x <= 0.88;
+      if (!isNearMouth) {
+        return { matched: false, score: 45, hint: "Raise hand closer to mouth height" };
+      }
+      // Inward wrist rotation moves the index tip even when wrist is anchored
+      const hasSpoonRotation = tipPath >= 0.015 || motionAmount >= 0.018 || spanY >= 0.012;
+      if (hasSpoonRotation) {
+        return { matched: true, score: 95, hint: "SgSL Spoon motion verified • Hold steady" };
+      }
+      return { matched: false, score: 70, hint: "Rotate wrist near mouth like a spoon (SgSL EATa)" };
     }
-
-    const isNearMouth = wrist.y < 0.65 && wrist.x >= 0.15 && wrist.x <= 0.85;
-    if (!isNearMouth) {
-      return { matched: false, score: 45, hint: "Raise hand closer to mouth height" };
-    }
-
-    const hasMotion = totalPath >= 0.025 || spanY >= 0.018;
-    if (hasMotion) {
-      return { matched: true, score: 95, hint: "Eating motion verified • Hold steady" };
-    }
-
-    return { matched: false, score: 70, hint: "Move hand gently towards mouth" };
   }
 
-  // Scenario 3: PLEASE (Chest rub)
+  // Scenario 3: PLEASE (Shared chest rub)
   if (targetSign === "please") {
-    // 3 or more extended fingers is a flat palm (allows relaxed thumb or pinky)
     const isFlatPalm = extendedCount >= 3;
     if (!isFlatPalm) {
       return { matched: false, score: 30, hint: "Open flat palm facing chest" };
     }
-
     const isOnChest = wrist.x >= 0.18 && wrist.x <= 0.82 && wrist.y >= 0.28 && wrist.y <= 0.88;
     if (!isOnChest) {
       return { matched: false, score: 45, hint: "Place flat palm on centre of chest" };
     }
-
-    const hasMotion = totalPath >= 0.025 || (spanX >= 0.015 && spanY >= 0.015);
+    const hasMotion = motionAmount >= 0.018 || (spanX >= 0.014 && spanY >= 0.014);
     if (hasMotion) {
-      return { matched: true, score: 96, hint: "Chest rub verified • Hold steady" };
+      return {
+        matched: true,
+        score: 96,
+        hint: mode === "asl" ? "ASL Chest circle verified • Hold steady" : "SgSL Polite chest rub verified • Hold steady",
+      };
     }
-
-    return { matched: false, score: 70, hint: "Rub palm gently in a circle on chest" };
+    return {
+      matched: false,
+      score: 70,
+      hint: mode === "asl" ? "Rub palm in a circle on chest (ASL)" : "Rub palm in a circle on chest (SgSL)",
+    };
   }
 
   return { matched: false, score: 15, hint: "Perform the sign shown above" };

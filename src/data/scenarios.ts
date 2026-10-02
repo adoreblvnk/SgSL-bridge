@@ -19,7 +19,7 @@ export const SCENARIOS: Scenario[] = [
           why: "Vibrations and gentle touch are natural, comfortable, and polite attention-getters in Deaf culture.",
         },
         avoidTip: {
-          title: "Avoid Wide Vigorous Waving",
+          title: "Wide Vigorous Waving",
           action: "Do not wave both arms across the office room or shout from behind.",
           why: "Aggressive visual waving creates sudden visual jarring and can feel frantic or alarming in a shared workspace.",
         },
@@ -42,6 +42,20 @@ export const SCENARIOS: Scenario[] = [
           note: "ASL commonly uses a single-handed C-shape mimicking lifting a mug, or a vertical fist stack. Traditional SgSL uses the two-handed kopi grinder motion inherited from Shanghainese sign language.",
           mediaUrl: "/media/coffee-asl.gif",
         },
+        signParts: [
+          {
+            gloss: "COFFEE",
+            mediaUrl: "/media/coffee.gif",
+            handShape: "Dominant fist grinding over base fist",
+            movement: "Circular coffee bean grinding rotation",
+          },
+          {
+            gloss: "TOGETHER / GO",
+            mediaUrl: "/media/go.gif",
+            handShape: "Forward pointing index finger",
+            movement: "Decisive forward thrust with affirmative nod",
+          },
+        ],
       },
       {
         type: "receptive",
@@ -49,7 +63,7 @@ export const SCENARIOS: Scenario[] = [
         colleagueName: "Uncle David",
         colleagueRole: "Senior Logistics Coordinator",
         mediaUrl: "/media/go.gif",
-        question: "Uncle David responds to your coffee invitation with this sign. What did he sign?",
+        question: "What did your colleague sign back?",
         options: [
           {
             id: "opt-1",
@@ -139,7 +153,7 @@ export const SCENARIOS: Scenario[] = [
           why: "Deaf individuals have heightened peripheral visual awareness. Entering their sightline is natural and prevents startling.",
         },
         avoidTip: {
-          title: "Do Not Tap From Behind",
+          title: "Tapping From Behind",
           action: "Avoid sneaking up behind a chair and tapping a shoulder without being visible.",
           why: "An unexpected touch from an unseen angle causes reflex startle responses in focused workspaces.",
         },
@@ -152,7 +166,7 @@ export const SCENARIOS: Scenario[] = [
         signGloss: "EAT TOGETHER?",
         phoneticGuide: "EAT + TOGETHER?",
         englishMeaning: "Want to eat lunch together / tapao?",
-        mediaUrl: "/media/eat.gif",
+        mediaUrl: "/media/eat-sgsl.gif",
         handShape: "Dominant hand forms an 'A-hand' (fist with thumb along fingers) held near mouth.",
         movement: "Wrist rotates inward twice near mouth, imitating holding a spoon or chopsticks, with an inquiring head tilt.",
         culturalTip: "In Singapore Deaf culture, eating is a primary community ritual. The sign reflects traditional communal hawker dining.",
@@ -162,6 +176,20 @@ export const SCENARIOS: Scenario[] = [
           note: "In ASL, EAT is signed by tapping a Flat-O handshape onto the lips. In contrast, pioneer SgSL uses the A-hand spoon rotation (EATa), reflecting traditional Chinese soup spoon dining.",
           mediaUrl: "/media/eat-asl.gif",
         },
+        signParts: [
+          {
+            gloss: "EAT (EATa)",
+            mediaUrl: "/media/eat-sgsl.gif",
+            handShape: "A-hand held near mouth",
+            movement: "Wrist rotation imitating spoon dining",
+          },
+          {
+            gloss: "TOGETHER / WANT",
+            mediaUrl: "/media/want.gif",
+            handShape: "Two open palms pulling inward",
+            movement: "Inward pull with an encouraging smile",
+          },
+        ],
       },
       {
         type: "receptive",
@@ -169,7 +197,7 @@ export const SCENARIOS: Scenario[] = [
         colleagueName: "Mei Ling",
         colleagueRole: "UX Design Lead",
         mediaUrl: "/media/want.gif",
-        question: "Mei Ling looks up from her screen and signs back. What is her reply?",
+        question: "What did your colleague sign back?",
         options: [
           {
             id: "opt-1",
@@ -259,7 +287,7 @@ export const SCENARIOS: Scenario[] = [
           why: "Looking down at a phone or glancing away breaks the 'visual floor', which Deaf signers interpret as conversational disinterest.",
         },
         avoidTip: {
-          title: "Do Not Nod Blankly or Pretend",
+          title: "Blank Nodding or Pretending",
           action: "Never nod along pretending you understood when you actually missed the message.",
           why: "Nodding falsely leads to confusion later and violates the high value Deaf culture places on honest, direct visual feedback.",
         },
@@ -282,6 +310,26 @@ export const SCENARIOS: Scenario[] = [
           note: "Both SgSL and ASL share the circular chest rub for PLEASE. In Singapore workplaces, SgSL pairs this with gentle head bowing and eye softening to convey local deference and warmth.",
           mediaUrl: "/media/please.gif",
         },
+        signParts: [
+          {
+            gloss: "PLEASE",
+            mediaUrl: "/media/please.gif",
+            handShape: "Flat open hand on centre of chest",
+            movement: "Circular clockwise rub with gentle eye contact",
+          },
+          {
+            gloss: "AGAIN",
+            mediaUrl: "/media/again.gif",
+            handShape: "Bent open hand arches into flat non-dominant palm",
+            movement: "Forward arching pivot landing into open palm",
+          },
+          {
+            gloss: "SLOW",
+            mediaUrl: "/media/slow.gif",
+            handShape: "Dominant hand strokes back of non-dominant forearm",
+            movement: "Slow upward glide along forearm with inquiring head tilt",
+          },
+        ],
       },
       {
         type: "receptive",
@@ -289,7 +337,7 @@ export const SCENARIOS: Scenario[] = [
         colleagueName: "Uncle David",
         colleagueRole: "Senior Logistics Coordinator",
         mediaUrl: "/media/finish.gif",
-        question: "Uncle David slows down, repeats the schedule detail, and finishes with this sign. What does it mean?",
+        question: "What does this response sign mean?",
         options: [
           {
             id: "opt-1",

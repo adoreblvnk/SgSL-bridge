@@ -60,20 +60,6 @@ export default function ActionStep({
           </div>
         </div>
 
-        {/* Action Steps */}
-        <div className="flex flex-col gap-2">
-          {data.steps.map((step, idx) => (
-            <div
-              key={idx}
-              className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center gap-2.5 text-xs font-semibold text-slate-800"
-            >
-              <span className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[11px] font-bold shrink-0">
-                {idx + 1}
-              </span>
-              <span>{step}</span>
-            </div>
-          ))}
-        </div>
 
         {/* Encouragement */}
         <p className="text-center text-xs font-medium text-slate-500 italic pt-1">
